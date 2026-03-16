@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: AudioPlaybackConnector\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2020-07-06 19:07+0800\n"
+"POT-Creation-Date: 2026-03-15 00:00+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,53 +17,120 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: AudioPlaybackConnector.cpp:39
+#: AudioPlaybackConnector.cpp
 msgid "Unsupported Operating System"
 msgstr ""
 
-#: AudioPlaybackConnector.cpp:39
-msgid ""
-"AudioPlaybackConnector is not supported on this operating system version."
+#: AudioPlaybackConnector.cpp
+msgid "AudioPlaybackConnector is not supported on this operating system version."
 msgstr ""
 
-#: AudioPlaybackConnector.cpp:75
+#: AudioPlaybackConnector.cpp
 msgid "AudioPlaybackConnector"
 msgstr ""
 
-#: AudioPlaybackConnector.cpp:196
+#: AudioPlaybackConnector.cpp
 msgid ""
 "All connections will be closed.\n"
 "Exit anyway?"
 msgstr ""
 
-#: AudioPlaybackConnector.cpp:201
-msgid "Reconnect on next start"
-msgstr ""
-
-#: AudioPlaybackConnector.cpp:204 AudioPlaybackConnector.cpp:240
+#: AudioPlaybackConnector.cpp AudioPlaybackConnector.cpp
 msgid "Exit"
 msgstr ""
 
-#: AudioPlaybackConnector.cpp:230
+#: AudioPlaybackConnector.cpp
+msgid "Settings"
+msgstr ""
+
+#: AudioPlaybackConnector.cpp
 msgid "Bluetooth Settings"
 msgstr ""
 
-#: AudioPlaybackConnector.cpp:287
+#: ConnectionController.hpp
 msgid "Connecting"
 msgstr ""
 
-#: AudioPlaybackConnector.cpp:322
+#: ConnectionController.hpp
 msgid "The request timed out"
 msgstr ""
 
-#: AudioPlaybackConnector.cpp:326
+#: ConnectionController.hpp
 msgid "The operation was denied by the system"
 msgstr ""
 
-#: AudioPlaybackConnector.cpp:337
+#: ConnectionController.hpp
 msgid "Unknown error"
 msgstr ""
 
-#: AudioPlaybackConnector.cpp:362
+#: ConnectionController.hpp
 msgid "Connected"
+msgstr ""
+
+#: SettingsWindow.hpp
+msgid "Settings Error"
+msgstr ""
+
+#: SettingsWindow.hpp
+msgid "Remove"
+msgstr ""
+
+#: SettingsWindow.hpp
+msgid "No preferred devices"
+msgstr ""
+
+#: SettingsWindow.hpp
+msgid "No recent devices"
+msgstr ""
+
+#: SettingsWindow.hpp
+msgid "Startup"
+msgstr ""
+
+#: SettingsWindow.hpp
+msgid "Start on Windows sign-in"
+msgstr ""
+
+#: SettingsWindow.hpp
+msgid "Failed to update startup task"
+msgstr ""
+
+#: SettingsWindow.hpp
+msgid "Uses Task Scheduler and starts after a 15 second delay"
+msgstr ""
+
+#: SettingsWindow.hpp
+msgid "Auto connect"
+msgstr ""
+
+#: SettingsWindow.hpp
+msgid "Automatically connect recent devices"
+msgstr ""
+
+#: SettingsWindow.hpp
+msgid "Automatically connect preferred devices"
+msgstr ""
+
+#: SettingsWindow.hpp
+msgid "Preferred devices"
+msgstr ""
+
+#: SettingsWindow.hpp
+msgid "Add device"
+msgstr ""
+
+#: SettingsWindow.hpp
+msgid "Recent devices"
+msgstr ""
+
+#: SettingsWindow.hpp
+msgid "Clear"
+msgstr ""
+
+#: SettingsWindow.hpp
+msgid "Added"
+msgstr ""
+
+#: SettingsWindow.hpp
+msgid "AudioPlaybackConnector Settings"
 msgstr ""

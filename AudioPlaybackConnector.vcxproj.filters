@@ -21,6 +21,15 @@
     <ClInclude Include="AudioPlaybackConnector.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="AutoConnectPlanner.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="AutostartManager.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ConnectionController.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="pch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -28,6 +37,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="SettingsUtil.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SettingsModels.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SettingsWindow.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Util.hpp">

@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: AudioPlaybackConnector\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2020-07-06 19:07+0800\n"
-"PO-Revision-Date: 2020-07-06 19:07+0800\n"
+"POT-Creation-Date: 2026-03-15 00:00+0800\n"
+"PO-Revision-Date: 2026-03-15 00:00+0800\n"
 "Last-Translator: Richard Yu <yurichard3839@gmail.com>\n"
 "Language-Team: \n"
 "Language: zh_TW\n"
@@ -38,13 +38,13 @@ msgstr ""
 "將會關閉所有連線。\n"
 "執意結束?"
 
-#: AudioPlaybackConnector.cpp:201
-msgid "Reconnect on next start"
-msgstr "下次啟動時重新連線"
-
 #: AudioPlaybackConnector.cpp:204 AudioPlaybackConnector.cpp:240
 msgid "Exit"
 msgstr "結束"
+
+#: AudioPlaybackConnector.cpp
+msgid "Settings"
+msgstr "設定"
 
 #: AudioPlaybackConnector.cpp:230
 msgid "Bluetooth Settings"
@@ -69,3 +69,71 @@ msgstr "未知錯誤"
 #: AudioPlaybackConnector.cpp:362
 msgid "Connected"
 msgstr "已連線"
+
+#: SettingsWindow.hpp
+msgid "Settings Error"
+msgstr "設定錯誤"
+
+#: SettingsWindow.hpp
+msgid "Remove"
+msgstr "移除"
+
+#: SettingsWindow.hpp
+msgid "No preferred devices"
+msgstr "沒有固定裝置"
+
+#: SettingsWindow.hpp
+msgid "No recent devices"
+msgstr "沒有最近連線裝置"
+
+#: SettingsWindow.hpp
+msgid "Startup"
+msgstr "啟動"
+
+#: SettingsWindow.hpp
+msgid "Start on Windows sign-in"
+msgstr "在 Windows 登入時啟動"
+
+#: SettingsWindow.hpp
+msgid "Failed to update startup task"
+msgstr "更新啟動工作失敗"
+
+#: SettingsWindow.hpp
+msgid "Uses Task Scheduler and starts after a 15 second delay"
+msgstr "使用工作排程器，並在登入後延遲 15 秒啟動"
+
+#: SettingsWindow.hpp
+msgid "Auto connect"
+msgstr "自動連線"
+
+#: SettingsWindow.hpp
+msgid "Automatically connect recent devices"
+msgstr "自動連線最近連線裝置"
+
+#: SettingsWindow.hpp
+msgid "Automatically connect preferred devices"
+msgstr "自動連線固定裝置"
+
+#: SettingsWindow.hpp
+msgid "Preferred devices"
+msgstr "固定裝置"
+
+#: SettingsWindow.hpp
+msgid "Add device"
+msgstr "新增裝置"
+
+#: SettingsWindow.hpp
+msgid "Recent devices"
+msgstr "最近連線裝置"
+
+#: SettingsWindow.hpp
+msgid "Clear"
+msgstr "清除"
+
+#: SettingsWindow.hpp
+msgid "Added"
+msgstr "已新增"
+
+#: SettingsWindow.hpp
+msgid "AudioPlaybackConnector Settings"
+msgstr "AudioPlaybackConnector 設定"

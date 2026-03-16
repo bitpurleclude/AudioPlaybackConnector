@@ -1,11 +1,13 @@
 #pragma once
 
 #include "resource.h"
+#include "SettingsModels.hpp"
 
 using namespace winrt::Windows::Data::Json;
 using namespace winrt::Windows::Devices::Enumeration;
 using namespace winrt::Windows::Foundation;
 using namespace winrt::Windows::Media::Audio;
+using namespace winrt::Windows::UI::Popups;
 using namespace winrt::Windows::UI::Xaml;
 using namespace winrt::Windows::UI::Xaml::Controls;
 using namespace winrt::Windows::UI::Xaml::Hosting;
@@ -17,6 +19,8 @@ constexpr UINT WM_CONNECTDEVICE = WM_APP + 2;
 HINSTANCE g_hInst;
 HWND g_hWnd;
 HWND g_hWndXaml;
+DesktopWindowXamlSource g_mainDesktopSource = nullptr;
+winrt::com_ptr<IDesktopWindowXamlSourceNative2> g_mainDesktopSourceNative2;
 Canvas g_xamlCanvas = nullptr;
 Flyout g_xamlFlyout = nullptr;
 MenuFlyout g_xamlMenu = nullptr;
@@ -25,6 +29,7 @@ DevicePicker g_devicePicker = nullptr;
 std::unordered_map<std::wstring, std::pair<DeviceInformation, AudioPlaybackConnection>> g_audioPlaybackConnections;
 HICON g_hIconLight = nullptr;
 HICON g_hIconDark = nullptr;
+AppSettings g_settings;
 NOTIFYICONDATAW g_nid = {
 	.cbSize = sizeof(g_nid),
 	.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP | NIF_SHOWTIP,
@@ -35,10 +40,12 @@ NOTIFYICONIDENTIFIER g_niid = {
 	.cbSize = sizeof(g_niid)
 };
 UINT WM_TASKBAR_CREATED = 0;
-bool g_reconnect = false;
-std::vector<std::wstring> g_lastDevices;
 
 #include "Util.hpp"
 #include "I18n.hpp"
 #include "SettingsUtil.hpp"
+#include "AutoConnectPlanner.hpp"
+#include "AutostartManager.hpp"
 #include "Direct2DSvg.hpp"
+#include "SettingsWindow.hpp"
+#include "ConnectionController.hpp"

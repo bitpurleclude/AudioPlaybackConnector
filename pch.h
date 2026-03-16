@@ -14,6 +14,7 @@
 #include <windows.h>
 #include <windowsx.h>
 #include <commctrl.h>
+#include <taskschd.h>
 #include <shellapi.h>
 #include <shobjidl_core.h>
 #include <d2d1_3.h>
@@ -22,7 +23,12 @@
 // C++ RunTime Header Files
 #include <cstdlib>
 #include <cstdint>
+#include <algorithm>
+#include <chrono>
+#include <string>
 #include <unordered_map>
+#include <unordered_set>
+#include <vector>
 #include <filesystem>
 
 // wil

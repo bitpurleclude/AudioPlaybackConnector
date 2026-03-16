@@ -14,4 +14,8 @@ Windows 10 2004+ 蓝牙音频接收 (A2DP Sink) 连接工具。
 * 从 [releases](https://github.com/ysc3839/AudioPlaybackConnector/releases) 下载并运行 AudioPlaybackConnector。
 * 在系统蓝牙设置中添加蓝牙设备。你可以右键点击通知区域的 AudioPlaybackConnector 图标然后选择“蓝牙设置”。
 * 点击 AudioPlaybackConnector 图标然后选择想要连接的设备。
+* 你也可以右键托盘图标打开“设置”，配置开机自启动、最近设备自动连接和固定设备自动连接。
 * 尽情享受吧！
+
+# 开发文档
+仓库的中文开发手册与 agent 规范见 [`docs/README.md`](docs/README.md)。

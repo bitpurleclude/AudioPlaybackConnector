@@ -4,15 +4,32 @@
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 void SetupFlyout();
 void SetupMenu();
-winrt::fire_and_forget ConnectDevice(DevicePicker, std::wstring_view);
 void SetupDevicePicker();
 void SetupSvgIcon();
 void UpdateNotifyIcon();
+bool PreTranslateXamlMessage(MSG&);
+
+void SyncAutostartState()
+{
+	try
+	{
+		auto autostartStatus = AutostartManager::RepairIfNeeded();
+		if (g_settings.autostartEnabled != autostartStatus.enabled)
+		{
+			g_settings.autostartEnabled = autostartStatus.enabled;
+			SettingsStore::SaveSettings();
+		}
+	}
+	catch (const winrt::hresult_error&)
+	{
+		LOG_CAUGHT_EXCEPTION();
+	}
+}
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	_In_opt_ HINSTANCE hPrevInstance,
-	_In_ LPWSTR    lpCmdLine,
-	_In_ int       nCmdShow)
+	_In_ LPWSTR lpCmdLine,
+	_In_ int nCmdShow)
 {
 	UNREFERENCED_PARAMETER(hPrevInstance);
 	UNREFERENCED_PARAMETER(lpCmdLine);
@@ -21,6 +38,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	g_hInst = hInstance;
 
 	winrt::init_apartment();
+	LoadTranslateData();
 
 	bool supported = false;
 	try
@@ -30,11 +48,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		supported = ApiInformation::IsTypePresent(winrt::name_of<DesktopWindowXamlSource>()) &&
 			ApiInformation::IsTypePresent(winrt::name_of<AudioPlaybackConnection>());
 	}
-	catch (winrt::hresult_error const&)
+	catch (const winrt::hresult_error&)
 	{
-		supported = false;
 		LOG_CAUGHT_EXCEPTION();
 	}
+
 	if (!supported)
 	{
 		TaskDialog(nullptr, nullptr, _(L"Unsupported Operating System"), nullptr, _(L"AudioPlaybackConnector is not supported on this operating system version."), TDCBF_OK_BUTTON, TD_ERROR_ICON, nullptr);
@@ -53,20 +71,20 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	RegisterClassExW(&wcex);
 
-	// When parent window size is 0x0 or invisible, the dpi scale of menu is incorrect. Here we set window size to 1x1 and use WS_EX_LAYERED to make window looks like invisible.
 	g_hWnd = CreateWindowExW(WS_EX_NOACTIVATE | WS_EX_LAYERED | WS_EX_TOPMOST, L"AudioPlaybackConnector", nullptr, WS_POPUP, 0, 0, 0, 0, nullptr, nullptr, hInstance, nullptr);
 	FAIL_FAST_LAST_ERROR_IF_NULL(g_hWnd);
 	FAIL_FAST_IF_WIN32_BOOL_FALSE(SetLayeredWindowAttributes(g_hWnd, 0, 0, LWA_ALPHA));
 
-	DesktopWindowXamlSource desktopSource;
-	auto desktopSourceNative2 = desktopSource.as<IDesktopWindowXamlSourceNative2>();
-	winrt::check_hresult(desktopSourceNative2->AttachToWindow(g_hWnd));
-	winrt::check_hresult(desktopSourceNative2->get_WindowHandle(&g_hWndXaml));
+	g_mainDesktopSource = DesktopWindowXamlSource();
+	g_mainDesktopSourceNative2 = g_mainDesktopSource.as<IDesktopWindowXamlSourceNative2>();
+	winrt::check_hresult(g_mainDesktopSourceNative2->AttachToWindow(g_hWnd));
+	winrt::check_hresult(g_mainDesktopSourceNative2->get_WindowHandle(&g_hWndXaml));
 
 	g_xamlCanvas = Canvas();
-	desktopSource.Content(g_xamlCanvas);
+	g_mainDesktopSource.Content(g_xamlCanvas);
 
-	LoadSettings();
+	SettingsStore::LoadSettings();
+	SyncAutostartState();
 	SetupFlyout();
 	SetupMenu();
 	SetupDevicePicker();
@@ -84,9 +102,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	MSG msg;
 	while (GetMessageW(&msg, nullptr, 0, 0))
 	{
-		BOOL processed = FALSE;
-		winrt::check_hresult(desktopSourceNative2->PreTranslateMessage(&msg, &processed));
-		if (!processed)
+		if (!PreTranslateXamlMessage(msg))
 		{
 			TranslateMessage(&msg);
 			DispatchMessageW(&msg);
@@ -96,44 +112,76 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	return static_cast<int>(msg.wParam);
 }
 
+bool PreTranslateXamlMessage(MSG& msg)
+{
+	BOOL processed = FALSE;
+	if (g_mainDesktopSourceNative2)
+	{
+		winrt::check_hresult(g_mainDesktopSourceNative2->PreTranslateMessage(&msg, &processed));
+		if (processed)
+		{
+			return true;
+		}
+	}
+
+	const auto& settingsNative2 = SettingsWindow::GetDesktopSourceNative2();
+	if (settingsNative2)
+	{
+		processed = FALSE;
+		winrt::check_hresult(settingsNative2->PreTranslateMessage(&msg, &processed));
+		if (processed)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	switch (message)
 	{
 	case WM_DESTROY:
-		for (const auto& connection : g_audioPlaybackConnections)
+		if (SettingsWindow::IsOpen())
 		{
-			connection.second.second.Close();
-			g_devicePicker.SetDisplayStatus(connection.second.first, {}, DevicePickerDisplayStatusOptions::None);
+			DestroyWindow(SettingsWindow::GetHwnd());
 		}
-		if (g_reconnect)
+
 		{
-			SaveSettings();
+			std::vector<std::pair<DeviceInformation, AudioPlaybackConnection>> activeConnections;
+			activeConnections.reserve(g_audioPlaybackConnections.size());
+			for (const auto& entry : g_audioPlaybackConnections)
+			{
+				activeConnections.push_back(entry.second);
+			}
+
+			for (const auto& connection : activeConnections)
+			{
+				connection.second.Close();
+				g_devicePicker.SetDisplayStatus(connection.first, {}, DevicePickerDisplayStatusOptions::None);
+			}
 			g_audioPlaybackConnections.clear();
 		}
-		else
-		{
-			g_audioPlaybackConnections.clear();
-			SaveSettings();
-		}
+
 		Shell_NotifyIconW(NIM_DELETE, &g_nid);
 		PostQuitMessage(0);
-		break;
+		return 0;
+
 	case WM_SETTINGCHANGE:
 		if (lParam && CompareStringOrdinal(reinterpret_cast<LPCWCH>(lParam), -1, L"ImmersiveColorSet", -1, TRUE) == CSTR_EQUAL)
 		{
 			UpdateNotifyIcon();
 		}
-		break;
+		return 0;
+
 	case WM_NOTIFYICON:
 		switch (LOWORD(lParam))
 		{
 		case NIN_SELECT:
 		case NIN_KEYSELECT:
 		{
-			using namespace winrt::Windows::UI::Popups;
-
-			RECT iconRect;
+			RECT iconRect{};
 			auto hr = Shell_NotifyIconGetRect(&g_niid, &iconRect);
 			if (FAILED(hr))
 			{
@@ -154,13 +202,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			g_devicePicker.Show(rect, Placement::Above);
 		}
 		break;
-		case WM_RBUTTONUP: // Menu activated by mouse click
+
+		case WM_RBUTTONUP:
 			g_menuFocusState = FocusState::Pointer;
 			break;
+
 		case WM_CONTEXTMENU:
 		{
 			if (g_menuFocusState == FocusState::Unfocused)
+			{
 				g_menuFocusState = FocusState::Keyboard;
+			}
 
 			auto dpi = GetDpiForWindow(hWnd);
 			Point point = {
@@ -168,7 +220,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				static_cast<float>(GET_Y_LPARAM(wParam) * USER_DEFAULT_SCREEN_DPI / dpi)
 			};
 
-			SetWindowPos(g_hWndXaml, 0, 0, 0, 0, 0, SWP_NOZORDER | SWP_SHOWWINDOW);
+			SetWindowPos(g_hWndXaml, nullptr, 0, 0, 0, 0, SWP_NOZORDER | SWP_SHOWWINDOW);
 			SetWindowPos(g_hWnd, HWND_TOPMOST, 0, 0, 1, 1, SWP_SHOWWINDOW);
 			SetForegroundWindow(hWnd);
 
@@ -176,24 +228,21 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 		break;
 		}
-		break;
+		return 0;
+
 	case WM_CONNECTDEVICE:
-		if (g_reconnect)
-		{
-			for (const auto& i : g_lastDevices)
-			{
-				ConnectDevice(g_devicePicker, i);
-			}
-			g_lastDevices.clear();
-		}
-		break;
+		ConnectionController::ConnectConfiguredDevices();
+		return 0;
+
 	default:
 		if (WM_TASKBAR_CREATED && message == WM_TASKBAR_CREATED)
 		{
 			UpdateNotifyIcon();
+			return 0;
 		}
 		return DefWindowProcW(hWnd, message, wParam, lParam);
 	}
+
 	return 0;
 }
 
@@ -203,21 +252,15 @@ void SetupFlyout()
 	textBlock.Text(_(L"All connections will be closed.\nExit anyway?"));
 	textBlock.Margin({ 0, 0, 0, 12 });
 
-	static CheckBox checkbox;
-	checkbox.IsChecked(g_reconnect);
-	checkbox.Content(winrt::box_value(_(L"Reconnect on next start")));
-
 	Button button;
 	button.Content(winrt::box_value(_(L"Exit")));
 	button.HorizontalAlignment(HorizontalAlignment::Right);
 	button.Click([](const auto&, const auto&) {
-		g_reconnect = checkbox.IsChecked().Value();
 		PostMessageW(g_hWnd, WM_CLOSE, 0, 0);
 	});
 
 	StackPanel stackPanel;
 	stackPanel.Children().Append(textBlock);
-	stackPanel.Children().Append(checkbox);
 	stackPanel.Children().Append(button);
 
 	Flyout flyout;
@@ -229,14 +272,23 @@ void SetupFlyout()
 
 void SetupMenu()
 {
-	// https://docs.microsoft.com/en-us/windows/uwp/design/style/segoe-ui-symbol-font
 	FontIcon settingsIcon;
 	settingsIcon.Glyph(L"\xE713");
 
 	MenuFlyoutItem settingsItem;
-	settingsItem.Text(_(L"Bluetooth Settings"));
+	settingsItem.Text(_(L"Settings"));
 	settingsItem.Icon(settingsIcon);
 	settingsItem.Click([](const auto&, const auto&) {
+		SettingsWindow::Show();
+	});
+
+	FontIcon bluetoothIcon;
+	bluetoothIcon.Glyph(L"\xE702");
+
+	MenuFlyoutItem bluetoothSettingsItem;
+	bluetoothSettingsItem.Text(_(L"Bluetooth Settings"));
+	bluetoothSettingsItem.Icon(bluetoothIcon);
+	bluetoothSettingsItem.Click([](const auto&, const auto&) {
 		winrt::Windows::System::Launcher::LaunchUriAsync(Uri(L"ms-settings:bluetooth"));
 	});
 
@@ -247,13 +299,13 @@ void SetupMenu()
 	exitItem.Text(_(L"Exit"));
 	exitItem.Icon(closeIcon);
 	exitItem.Click([](const auto&, const auto&) {
-		if (g_audioPlaybackConnections.size() == 0)
+		if (g_audioPlaybackConnections.empty())
 		{
 			PostMessageW(g_hWnd, WM_CLOSE, 0, 0);
 			return;
 		}
 
-		RECT iconRect;
+		RECT iconRect{};
 		auto hr = Shell_NotifyIconGetRect(&g_niid, &iconRect);
 		if (FAILED(hr))
 		{
@@ -272,6 +324,8 @@ void SetupMenu()
 
 	MenuFlyout menu;
 	menu.Items().Append(settingsItem);
+	menu.Items().Append(bluetoothSettingsItem);
+	menu.Items().Append(MenuFlyoutSeparator());
 	menu.Items().Append(exitItem);
 	menu.Opened([](const auto& sender, const auto&) {
 		auto menuItems = sender.as<MenuFlyout>().Items();
@@ -289,103 +343,6 @@ void SetupMenu()
 	g_xamlMenu = menu;
 }
 
-winrt::fire_and_forget ConnectDevice(DevicePicker picker, DeviceInformation device)
-{
-	picker.SetDisplayStatus(device, _(L"Connecting"), DevicePickerDisplayStatusOptions::ShowProgress | DevicePickerDisplayStatusOptions::ShowDisconnectButton);
-
-	bool success = false;
-	std::wstring errorMessage;
-
-	try
-	{
-		auto connection = AudioPlaybackConnection::TryCreateFromId(device.Id());
-		if (connection)
-		{
-			g_audioPlaybackConnections.emplace(device.Id(), std::pair(device, connection));
-
-			connection.StateChanged([](const auto& sender, const auto&) {
-				if (sender.State() == AudioPlaybackConnectionState::Closed)
-				{
-					auto it = g_audioPlaybackConnections.find(std::wstring(sender.DeviceId()));
-					if (it != g_audioPlaybackConnections.end())
-					{
-						g_devicePicker.SetDisplayStatus(it->second.first, {}, DevicePickerDisplayStatusOptions::None);
-						g_audioPlaybackConnections.erase(it);
-					}
-					sender.Close();
-				}
-			});
-
-			co_await connection.StartAsync();
-			auto result = co_await connection.OpenAsync();
-
-			switch (result.Status())
-			{
-			case AudioPlaybackConnectionOpenResultStatus::Success:
-				success = true;
-				break;
-			case AudioPlaybackConnectionOpenResultStatus::RequestTimedOut:
-				success = false;
-				errorMessage = _(L"The request timed out");
-				break;
-			case AudioPlaybackConnectionOpenResultStatus::DeniedBySystem:
-				success = false;
-				errorMessage = _(L"The operation was denied by the system");
-				break;
-			case AudioPlaybackConnectionOpenResultStatus::UnknownFailure:
-				success = false;
-				winrt::throw_hresult(result.ExtendedError());
-				break;
-			}
-		}
-		else
-		{
-			success = false;
-			errorMessage = _(L"Unknown error");
-		}
-	}
-	catch (winrt::hresult_error const& ex)
-	{
-		success = false;
-		errorMessage.resize(64);
-		while (1)
-		{
-			auto result = swprintf(errorMessage.data(), errorMessage.size(), L"%s (0x%08X)", ex.message().c_str(), static_cast<uint32_t>(ex.code()));
-			if (result < 0)
-			{
-				errorMessage.resize(errorMessage.size() * 2);
-			}
-			else
-			{
-				errorMessage.resize(result);
-				break;
-			}
-		}
-		LOG_CAUGHT_EXCEPTION();
-	}
-
-	if (success)
-	{
-		picker.SetDisplayStatus(device, _(L"Connected"), DevicePickerDisplayStatusOptions::ShowDisconnectButton);
-	}
-	else
-	{
-		auto it = g_audioPlaybackConnections.find(std::wstring(device.Id()));
-		if (it != g_audioPlaybackConnections.end())
-		{
-			it->second.second.Close();
-			g_audioPlaybackConnections.erase(it);
-		}
-		picker.SetDisplayStatus(device, errorMessage, DevicePickerDisplayStatusOptions::ShowRetryButton);
-	}
-}
-
-winrt::fire_and_forget ConnectDevice(DevicePicker picker, std::wstring_view deviceId)
-{
-	auto device = co_await DeviceInformation::CreateFromIdAsync(deviceId);
-	ConnectDevice(picker, device);
-}
-
 void SetupDevicePicker()
 {
 	g_devicePicker = DevicePicker();
@@ -396,7 +353,7 @@ void SetupDevicePicker()
 		SetWindowPos(g_hWnd, nullptr, 0, 0, 0, 0, SWP_NOZORDER | SWP_HIDEWINDOW);
 	});
 	g_devicePicker.DeviceSelected([](const auto& sender, const auto& args) {
-		ConnectDevice(sender, args.SelectedDevice());
+		ConnectionController::ConnectDevice(sender, args.SelectedDevice());
 	});
 	g_devicePicker.DisconnectButtonClicked([](const auto& sender, const auto& args) {
 		auto device = args.Device();
@@ -425,7 +382,8 @@ void SetupSvgIcon()
 	FAIL_FAST_IF_NULL_ALLOC(svgData);
 
 	const std::string_view svg(svgData, size);
-	const int width = GetSystemMetrics(SM_CXSMICON), height = GetSystemMetrics(SM_CYSMICON);
+	const int width = GetSystemMetrics(SM_CXSMICON);
+	const int height = GetSystemMetrics(SM_CYSMICON);
 
 	g_hIconLight = SvgTohIcon(svg, width, height, { 0, 0, 0, 1 });
 	g_hIconDark = SvgTohIcon(svg, width, height, { 1, 1, 1, 1 });
@@ -433,7 +391,8 @@ void SetupSvgIcon()
 
 void UpdateNotifyIcon()
 {
-	DWORD value = 0, cbValue = sizeof(value);
+	DWORD value = 0;
+	DWORD cbValue = sizeof(value);
 	LOG_IF_WIN32_ERROR(RegGetValueW(HKEY_CURRENT_USER, LR"(Software\Microsoft\Windows\CurrentVersion\Themes\Personalize)", L"SystemUsesLightTheme", RRF_RT_REG_DWORD, nullptr, &value, &cbValue));
 	g_nid.hIcon = value != 0 ? g_hIconLight : g_hIconDark;
 

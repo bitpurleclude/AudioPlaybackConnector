@@ -14,4 +14,8 @@ So I write this app, provide a simple, modern and open-source alternative.
 * Download and run AudioPlaybackConnector from [releases](https://github.com/ysc3839/AudioPlaybackConnector/releases).
 * Add a bluetooth device in system bluetooth settings. You can right click AudioPlaybackConnector icon in notification area and select "Bluetooth Settings".
 * Click AudioPlaybackConnector icon and select the device you want to connect.
+* You can right click the tray icon and open "Settings" to configure start on sign-in, recent-device auto connect and preferred-device auto connect.
 * Enjoy!
+
+# Development Docs
+Chinese developer documentation and agent rules are available in [`docs/README.md`](docs/README.md).
